@@ -1,0 +1,79 @@
+using Microsoft.EntityFrameworkCore;
+using Commons.Models.Generico;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Commons.Models;
+using Commons.Models.Administracion;
+using Commons.Helpers;
+using Commons.Utilerias;
+using System.Configuration;
+using Keycloak.AuthServices.Authentication;
+
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+
+builder.Services.AddCors((options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy =>
+                      {
+                          policy.WithOrigins("http://localhost:3000/");
+                      });
+}));
+
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.OperationFilter<HeaderGlobales>();
+});
+
+builder.Services.AddDbContext<adminDBContext>(
+    options =>
+    {
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnectionString"));
+    });
+
+builder.Services.AddDbContext<genericoDBContext>();
+
+builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+//builder.Services.AddScoped(typeof(IRepositoryGeneric<>),typeof(RepositoryGeneric<>));
+builder.Services.AddMvc(option => option.EnableEndpointRouting = false)
+    .AddNewtonsoftJson(opt => opt.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+
+//Keycloak
+builder.Services.AddKeycloakAuthentication(builder.Configuration);
+
+var app = builder.Build();
+
+app.UseCors(x => x
+    .AllowAnyOrigin()
+    .AllowAnyMethod()
+    .AllowAnyHeader());
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+//Keycloak
+app.UseAuthentication();
+
+app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapControllers();
+}
+else
+{
+    app.MapControllers().RequireAuthorization();    //Keycloak
+}
+
+app.Run();

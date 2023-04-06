@@ -1,0 +1,82 @@
+﻿using Commons.Helpers;
+using Commons.Models;
+using Commons.Models.Administracion;
+using Commons.Models.Generico;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Drawing;
+using System.Drawing.Text;
+
+namespace Commons
+{
+    public class TMSControllerBase : ControllerBase
+    {
+        protected readonly adminDBContext _contextAdmin;
+        protected readonly genericoDBContext _contextGenerico;
+        private HttpContext _httpContext;
+        protected IConfiguration _configuration;
+        //
+        protected Logger _logger;
+        private adminDBContext contextAdmin;
+        private genericoDBContext contextGenerico;
+        private IHttpContextAccessor contextAccessor;
+        private SingletonClientes _singletonClientes;
+
+        public TMSControllerBase(adminDBContext contextAdmin, genericoDBContext contextGenerico,
+            IHttpContextAccessor contextAccessor, IConfiguration configuration, SingletonClientes singletonClientes) : base()
+        {
+            _configuration = configuration;
+            bool continuar = true;
+            _contextAdmin = contextAdmin;
+            _contextGenerico = contextGenerico;
+            _httpContext = contextAccessor.HttpContext;
+            _singletonClientes = singletonClientes;
+
+            if (_httpContext != null)
+            {
+                if (_httpContext.Request.Headers.TryGetValue("tenant", out var tenantId))
+                {
+                    string typeMethod = _httpContext.Request.Method;
+                    string nombre = ObtenerContexto(tenantId);
+                    _logger = Logger.InstanciarLoggerAsync("SCAF-APIS-" + nombre, _configuration).GetAwaiter().GetResult();
+                }
+                else
+                {
+                    throw new Exception("Invalid Tenant!");
+                }
+            }
+        }
+
+        private string ObtenerContexto(string tenant)
+        {
+            try
+            {
+                //var cliente = _contextAdmin.Clientes.FirstOrDefault(c => c.Uiid.ToString() == tenant && c.Estatus == true);
+                var cliente = _singletonClientes.GetClientesSingleton(tenant);
+                if (cliente != null)
+                {
+                    _contextGenerico.Database.SetConnectionString(cliente.CadenaConexion);
+                    return cliente.Nombre;
+                }
+                else
+                {
+                    return String.Empty;
+                    throw new Exception("Error tenant no found");
+                }
+            }
+            catch (Exception e)
+            {
+<<<<<<< HEAD
+            //    throw new Exception("Error connection string: ");
+=======
+                //_logger = await LoggerController.InstanciarLoggerAsync("SCAF-APIS-" + tenant);
+                //ogger.agregarLogAsync("Error connection string " + e.Message);
+                throw new Exception("Error connection string: ");
+>>>>>>> 6e480e69899b2db601b021613d57bb832104561a
+            }
+        }
+
+
+
+    }
+}
